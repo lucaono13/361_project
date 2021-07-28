@@ -1,5 +1,3 @@
 # Software Engineering I Project
 
-* Two sub-folders in this repo:
-  * Program (Football Manager Save Tracker)
-  * Microservice (Profile/Single Sign On)
+* This repo will be used for the server backend using Golang. Will help to keep packages together.
