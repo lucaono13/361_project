@@ -1,6 +1,10 @@
 package structure
 
-import "time"
+import (
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+)
 
 type User struct {
 	// ID        string    `json:"id" sql:"id"`
@@ -15,3 +19,8 @@ type User struct {
 }
 
 // type UserKey struct{}
+type SignedDetails struct {
+	Email    string
+	Username string
+	jwt.StandardClaims
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/lucaono13/361_project/structure"
 )
 
 // type Token struct {
@@ -88,14 +89,10 @@ func getSecret() string {
 	
 }
 
-type SignedDetails struct {
-	Email    string
-	Username string
-	jwt.StandardClaims
-}
+
 
 func GenerateAllTokens(user string, email string) (signedToken string, signedRefToken string, err error) {
-	claims := &SignedDetails{
+	claims := &structure.SignedDetails{
 		Email:    email,
 		Username: user,
 		StandardClaims: jwt.StandardClaims{
@@ -103,7 +100,7 @@ func GenerateAllTokens(user string, email string) (signedToken string, signedRef
 		},
 	}
 
-	refreshClaims := &SignedDetails{
+	refreshClaims := &structure.SignedDetails{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
 		}
@@ -122,10 +119,10 @@ func GenerateAllTokens(user string, email string) (signedToken string, signedRef
 
 }
 
-func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
+func ValidateToken(signedToken string) (claims *structure.SignedDetails, msg string) {
 	token, err := jwt.ParseWithClaims(
 		signedToken,
-		&SignedDetails{},
+		&structure.SignedDetails{},
 		func(token *jwt.Token) (interface{}, err) {
 			return []byte(getSecret()), nil
 		},
@@ -136,7 +133,7 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 		return
 	}
 
-	claims, ok := token.Claims.(*SignedDetails)
+	claims, ok := token.Claims.(*structure.SignedDetails)
 	if !ok {
 		msg = fmt.Sprintf("invalid token")
 		msg = err.Error()
