@@ -1,34 +1,30 @@
 package controllers
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
-	
-	"encoding/json"
 
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/lucaono13/361_project/structure"
-	"github.com/lucaono13/361_project/handlers"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-
 )
 
-var validate = validator.New()
+// var validate = validator.New()
+// var mySession = session.Must(session.NewSession())
+var sess = session.Must(session.NewSession(&aws.Config{
+	Region: aws.String("us-west-2"),
+}))
+var db = dynamodb.New(sess)
 
-var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-west-2"))
-
+// var db = dynamodb.New(session.NewSession(), aws.NewConfig().WithRegion("us-west-2"))
 
 // Function created to encrypt the password to store in the DynamoDB
-func Hash( password string ) string {
+func Hash(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
 		log.Panic(err)
@@ -37,25 +33,25 @@ func Hash( password string ) string {
 	return string(bytes)
 }
 
-func FindUser( email string ) (*user, error) {
+func FindUser(email string) (*structure.User, error) {
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String("---"),
+		TableName: aws.String("profiles361_"),
 		Key: map[string]*dynamodb.AttributeValue{
-			"Email": {
+			"email": {
 				S: aws.String(email),
 			},
 		},
 	}
 
 	result, err := db.GetItem(input)
-	if err != nul {
+	if err != nil {
 		return nil, err
 	}
 	if result.Item == nil {
 		return nil, nil
 	}
 
-	ur := new(User)
+	ur := new(structure.User)
 	err = dynamodbattribute.UnmarshalMap(result.Item, ur)
 	if err != nil {
 		return nil, err
@@ -65,62 +61,53 @@ func FindUser( email string ) (*user, error) {
 
 }
 
-func AddUser( ur *User) error {
+// func AddUser(ur *structure.User) error {
+func AddUser(email string, password string) error {
+	ur, ferr := FindUser(email)
+	if ferr != nil {
+		return ferr
+	}
+	if ur == nil {
+		return errors.New("email already in use")
+	}
+	fmt.Println(email, password)
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String(),
+		TableName: aws.String("profiles361_"),
 		Item: map[string]*dynamodb.AttributeValue{
-			"Email":{ 
-				S: aws.String(ur.Email) 
+			"email": {
+				S: aws.String(email),
 			},
-			"Password":{ 
-				S: aws.String(ur.Password) 
+			"password": {
+				S: aws.String(password),
 			},
-			"CreatedAt":{ 
-				S: aws.String(ur.CreatedAt) 
-			},
-			"UpdatedAt":{ 
-				S: aws.String(ur.UpdatedAt) 
-			},
-			
-		},
-		ConditionExpression: "Email <> :email",
-		ExpressionAttributeValues: {
-			":email" : { S: ur.Email}
 		},
 	}
-
 	_, err := db.PutItem(input)
 	return err
 }
 
-
 // Function to register a new user
-func SignUp(email string, pass string) (error) {
-	user := &structure.User{}
+// func SignUp(email string, pass string) error {
+func SignUp(b *structure.User) error {
+	// user := &structure.User{}
 
-	pass := Hash(user.Password)
+	password := Hash(b.Password)
 
-	user.Email = email
-	user.Password = pass
-	user.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	user.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-
-	err := AddUser(user)
+	// user.Email = email
+	// user.Password = pass
+	fmt.Println(b.Email, password, b.Password)
+	err := AddUser(b.Email, password)
 
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-
 	return err
-
 
 }
 
-
-
 // func Login(w http.ResponseWriter, r *http.Request) {
-func Login(email string, password string) error {
+func Login(email string, password string) string {
 	user := structure.User{}
 	user.Email = email
 	user.Password = password
@@ -128,11 +115,15 @@ func Login(email string, password string) error {
 	return resp
 }
 
-func VerifyLogin( user structure.User) map[string]interface{} {
+func VerifyLogin(user structure.User) string {
 	ur, err := FindUser(user.Email)
 
+	if err != nil {
+		return "Invalid Login"
+	}
+
 	check := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(ur.Password))
-	if check != nil && check == bcrypt.ErrMismatchedHashAndPassword{
+	if check != nil && check == bcrypt.ErrMismatchedHashAndPassword {
 		return "Invalid Login"
 	}
 
