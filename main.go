@@ -66,40 +66,22 @@ func getInfo(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
 	usr := new(structure.User)
 	usr.Email = req.QueryStringParameters["email"]
 
-	user, err = controllers.FindUser(usr.Email)
+	user, err := controllers.FindUser(usr.Email)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       "Bad request",
 		}
 	}
-	stringBody, _ := json.Marshal("email":user.Email, "bio":user.Bio)
+	nbu := new(structure.BioUpdate)
+	nbu.Bio = user.Bio
+	nbu.Email = user.Email
+	stringBody, _ := json.Marshal(nbu)
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
-		Body: stringBody,
+		Body:       string(stringBody),
 	}
 }
-
-// func register(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-
-// 	b := structure.User{}
-// 	err := json.Unmarshal([]byte(req.Body), b)
-// 	if err != nil {
-// 		return clientError(http.StatusUnprocessableEntity)
-// 	}
-// 	ferr := controllers.SignUp(b.Email, b.Password)
-// 	// fmt.Println(req)
-// 	// err := controllers.SignUp(req.QueryStringParameters["email"], req.QueryStringParameters["password"])
-
-// 	if ferr != nil {
-// 		return serverError(err)
-// 	}
-
-// 	return events.APIGatewayProxyResponse{
-// 		StatusCode: 200,
-// 	}, nil
-
-// }
 
 func serverError(err error) events.APIGatewayProxyResponse {
 	errorLogger.Println(err.Error())

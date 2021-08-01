@@ -125,7 +125,7 @@ func SignIn(user structure.User) events.APIGatewayProxyResponse {
 
 }
 
-func UpdateBio(newBio structure.BioUpdate) events.APIGatewayProxyResponse {
+func UpdateBio(newBio *structure.BioUpdate) events.APIGatewayProxyResponse {
 	usr, ferr := FindUser(newBio.Email)
 	if ferr != nil {
 		return events.APIGatewayProxyResponse{

@@ -18,3 +18,7 @@ type BioUpdate struct {
 	Bio   string `json:"bio"`
 	Email string `json:"email"`
 }
+
+// type respBodyBio struct {
+
+// }
