@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -140,15 +141,6 @@ func UpdateBio(newBio *structure.BioUpdate) events.APIGatewayProxyResponse {
 		}
 	}
 
-	// nBio := new(BioUpdate)
-	// nBio.Bio = newBio
-	// nBio.Email = usr.Email
-
-	expr, err := dynamodbattribute.MarshalMap(newBio)
-	if err != nil {
-		log.Fatalf("Got error marshalling info: %s", err)
-	}
-
 	input := &dynamodb.UpdateItemInput{
 		TableName: aws.String("profiles361_"),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -156,14 +148,22 @@ func UpdateBio(newBio *structure.BioUpdate) events.APIGatewayProxyResponse {
 				S: aws.String(usr.Email),
 			},
 		},
-		UpdateExpression:          aws.String("set bio = :bio"),
-		ConditionExpression:       aws.String("email = :email"),
-		ExpressionAttributeValues: expr,
-		ReturnValues:              aws.String("ALL_NEW"),
+		UpdateExpression:    aws.String("set bio = :bio"),
+		ConditionExpression: aws.String("email = :email"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":email": {
+				S: aws.String(newBio.Email),
+			},
+			":bio": {
+				S: aws.String(newBio.Bio),
+			},
+		},
+		ReturnValues: aws.String("ALL_NEW"),
 	}
 
 	_, uerr := db.UpdateItem(input)
 	if uerr != nil {
+		fmt.Println(uerr)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       "Error updating User bio",
@@ -176,10 +176,3 @@ func UpdateBio(newBio *structure.BioUpdate) events.APIGatewayProxyResponse {
 	}
 
 }
-
-// func userExists() events.APIGatewayProxyResponse {
-// 	return events.APIGatewayProxyResponse{
-// 		StatusCode: 409,
-// 		Body:       "User already exists",
-// 	}
-// }

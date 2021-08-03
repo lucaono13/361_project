@@ -15,26 +15,26 @@ import (
 
 var errorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
-func signIn(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
+func signIn(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	usr := new(structure.User)
 	usr.Email = req.QueryStringParameters["email"]
 	usr.Password = req.QueryStringParameters["pass"]
 
 	err := controllers.SignIn(*usr)
 
-	return err
+	return err, nil
 }
 
-func register(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
+func register(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	usr := new(structure.User)
 	usr.Email = req.QueryStringParameters["email"]
 	usr.Password = req.QueryStringParameters["pass"]
 
 	err := controllers.CreateUser(*usr)
-	return err
+	return err, nil
 }
 
-func updateBio(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
+func updateBio(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// usr := new(structure.User)
 	b := new(structure.BioUpdate)
 	b.Email = req.QueryStringParameters["email"]
@@ -42,27 +42,21 @@ func updateBio(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       "Wrong content type. Ensure that content type is application/json",
-		}
+		}, nil
 	}
 
-	err := json.Unmarshal([]byte(req.Body), b)
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Error reading body",
-		}
-	}
+	b.Bio = req.Body
 	if b.Bio == "" {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       "Bad request",
-		}
+		}, nil
 	}
 
-	return controllers.UpdateBio(b)
+	return controllers.UpdateBio(b), nil
 }
 
-func getInfo(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
+func getInfo(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	usr := new(structure.User)
 	usr.Email = req.QueryStringParameters["email"]
 
@@ -71,7 +65,7 @@ func getInfo(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       "Bad request",
-		}
+		}, nil
 	}
 	nbu := new(structure.BioUpdate)
 	nbu.Bio = user.Bio
@@ -80,45 +74,47 @@ func getInfo(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Body:       string(stringBody),
-	}
+	}, nil
 }
 
-func serverError(err error) events.APIGatewayProxyResponse {
+func serverError(err error) (events.APIGatewayProxyResponse, error) {
 	errorLogger.Println(err.Error())
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       http.StatusText(http.StatusInternalServerError),
-	}
+	}, nil
 }
 
-func clientError(status int) events.APIGatewayProxyResponse {
-	// log.Println("Hello why")
+func clientError(status int) (events.APIGatewayProxyResponse, error) {
+	log.Println("Hello why")
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       http.StatusText(status),
-	}
+	}, nil
 }
 
 func main() {
 	lambda.Start(router)
 }
 
-func router(req events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
-	// fmt.Println("Hi there")
-	// log.Println(req.HTTPMethod)
-	htype := req.Headers["type"]
-	switch htype {
-	case "signin":
-		return signIn(req)
-	case "create":
+func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	qtype := req.QueryStringParameters["type"]
+	switch req.HTTPMethod {
+	case "GET":
+		switch qtype {
+		case "signin":
+			return signIn(req)
+		case "getInfo":
+			return getInfo(req)
+		default:
+			return clientError(http.StatusMethodNotAllowed)
+		}
+	case "POST":
 		return register(req)
-	case "updateBio":
+	case "PUT":
 		return updateBio(req)
-	case "getInfo":
-		return getInfo(req)
 	default:
-		// fmt.Println("WTF")
 		return clientError(http.StatusMethodNotAllowed)
 	}
 }
