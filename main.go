@@ -35,15 +35,8 @@ func register(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateBio(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	// usr := new(structure.User)
 	b := new(structure.BioUpdate)
 	b.Email = req.QueryStringParameters["email"]
-	if req.Headers["content-type"] != "application/json" && req.Headers["Content-Type"] != "application/json" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Wrong content type. Ensure that content type is application/json",
-		}, nil
-	}
 
 	b.Bio = req.Body
 	if b.Bio == "" {
